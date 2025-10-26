@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MessageSquare, Phone } from 'lucide-react';
 import { ChatBox } from './components/ChatBox';
 import { VoiceCallWidget } from './components/VoiceCallWidget';
 import { useConversationStore } from './store/conversationStore';
@@ -9,36 +10,48 @@ function App() {
   const { conversationId } = useConversationStore();
 
   useEffect(() => {
+    // Get initial tab from URL hash
+    const hash = window.location.hash.slice(1) || 'chat';
+    if (hash === 'chat' || hash === 'voice') {
+      setActiveTab(hash);
+    }
+  }, []);
+
+  useEffect(() => {
     console.log('App mounted with conversation ID:', conversationId);
   }, [conversationId]);
+
+  const handleTabChange = (tab: 'chat' | 'voice') => {
+    setActiveTab(tab);
+    window.location.hash = tab;
+  };
 
   return (
     <div className="app">
       <div className="container">
         <header className="app-header">
           <div className="header-content">
-            <h1>🤖 Receptionist AI</h1>
+            <h1>Receptionist AI</h1>
             <p className="conversation-id">
-              Conversation ID: <code>{conversationId}</code>
+              ID: <code>{conversationId}</code>
             </p>
-          </div>
-          <div className="api-status">
-            <span className="status-indicator">●</span> Ready
           </div>
         </header>
 
         <div className="tabs">
           <button
             className={`tab ${activeTab === 'chat' ? 'active' : ''}`}
-            onClick={() => setActiveTab('chat')}
+            onClick={() => handleTabChange('chat')}
           >
-            💬 Chat
+            <MessageSquare size={18} />
+            <span>Chat</span>
           </button>
           <button
             className={`tab ${activeTab === 'voice' ? 'active' : ''}`}
-            onClick={() => setActiveTab('voice')}
+            onClick={() => handleTabChange('voice')}
           >
-            🎤 Voice Call
+            <Phone size={18} />
+            <span>Voice Call</span>
           </button>
         </div>
 
@@ -46,11 +59,6 @@ function App() {
           {activeTab === 'chat' && <ChatBox />}
           {activeTab === 'voice' && <VoiceCallWidget />}
         </div>
-
-        <footer className="app-footer">
-          <p>Backend API: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}</p>
-          <p>WebSocket: {import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}</p>
-        </footer>
       </div>
     </div>
   );

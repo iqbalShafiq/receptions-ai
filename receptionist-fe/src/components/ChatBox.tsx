@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { Send } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useConversationStore } from '../store/conversationStore';
 import type { ChatResponse } from '../types/api';
 import './ChatBox.css';
@@ -64,7 +66,9 @@ export const ChatBox = () => {
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className={`message message-${msg.role}`}>
-              <div className="message-content">{msg.content}</div>
+              <div className="message-content">
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
               <div className="message-time">{msg.timestamp.toLocaleTimeString()}</div>
             </div>
           ))
@@ -88,8 +92,8 @@ export const ChatBox = () => {
           disabled={isLoading}
           className="chat-input"
         />
-        <button type="submit" disabled={isLoading} className="chat-submit">
-          {isLoading ? 'Sending...' : 'Send'}
+        <button type="submit" disabled={isLoading} className="chat-submit" title="Send message">
+          <Send size={18} />
         </button>
       </form>
     </div>

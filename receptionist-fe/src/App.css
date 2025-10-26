@@ -3,7 +3,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ffffff;
 }
 
 .container {
@@ -85,10 +85,12 @@
   background: white;
   border-bottom: 1px solid #e9ecef;
   align-items: center;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tab {
-  padding: 14px 20px;
+  padding: 14px 24px;
   background: none;
   border: none;
   color: #666;
@@ -99,6 +101,9 @@
   position: relative;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .tab:hover {
@@ -120,18 +125,6 @@
   gap: 16px;
 }
 
-.app-footer {
-  padding: 12px 24px;
-  background: white;
-  border-top: 1px solid #e9ecef;
-  font-size: 12px;
-  color: #999;
-  text-align: right;
-}
-
-.app-footer p {
-  margin: 4px 0;
-}
 
 /* Responsive */
 @media (max-width: 768px) {

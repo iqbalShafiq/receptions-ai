@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Phone, Square } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
@@ -126,19 +127,23 @@ export const VoiceCallWidget = () => {
         )}
 
         <div className="voice-controls">
-          {!isCallActive ? (
-            <button
-              onClick={handleStartCall}
-              disabled={!isConnected}
-              className="btn btn-primary btn-lg"
-            >
-              🎤 Start Voice Call
-            </button>
-          ) : (
-            <button onClick={handleStopCall} className="btn btn-danger btn-lg">
-              ⏹ Stop Recording
-            </button>
-          )}
+          <div className="voice-button-container">
+            {!isCallActive ? (
+              <button
+                onClick={handleStartCall}
+                disabled={!isConnected}
+                className="mic-button"
+                title="Start Voice Call"
+              >
+                <Phone size={32} />
+              </button>
+            ) : (
+              <button onClick={handleStopCall} className="mic-button recording" title="Stop Recording">
+                <Square size={32} />
+              </button>
+            )}
+            {!isCallActive && <p className="button-label">Click to call the receptionist</p>}
+          </div>
         </div>
 
         {isRecording && (
@@ -154,21 +159,6 @@ export const VoiceCallWidget = () => {
             Processing response...
           </div>
         )}
-
-        <div className="text-message-form">
-          <input
-            type="text"
-            placeholder="Or type a message..."
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isRecording) {
-                handleSendText(e.currentTarget.value);
-                e.currentTarget.value = '';
-              }
-            }}
-            disabled={isRecording}
-            className="text-input"
-          />
-        </div>
       </div>
     </div>
   );
