@@ -10,6 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 export const ChatBox = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { messages, addMessage, updateLastMessage, error, setError, conversationId } = useConversationStore();
@@ -94,6 +95,7 @@ export const ChatBox = () => {
                 if (!messageAdded) {
                   addMessage('assistant', fullResponse);
                   messageAdded = true;
+                  setIsStreaming(true);
                 } else {
                   // Update message with new accumulated content
                   updateLastMessage(fullResponse);
@@ -106,9 +108,11 @@ export const ChatBox = () => {
                 } else {
                   addMessage('assistant', fullResponse);
                   messageAdded = true;
+                  setIsStreaming(true);
                 }
               } else if (data.type === 'done') {
                 // Stream complete
+                setIsStreaming(false);
                 setError(null);
               } else if (data.type === 'error') {
                 // Error occurred
@@ -117,6 +121,7 @@ export const ChatBox = () => {
                 } else {
                   updateLastMessage(`Error: ${data.data}`);
                 }
+                setIsStreaming(false);
                 setError(data.data);
               }
             } catch (e) {
@@ -129,6 +134,7 @@ export const ChatBox = () => {
       const errorMsg = err instanceof Error ? err.message : 'Failed to send message';
       addMessage('assistant', `Error: ${errorMsg}`);
       setError(errorMsg);
+      setIsStreaming(false);
     } finally {
       setIsLoading(false);
       resizeTextarea();
@@ -159,16 +165,24 @@ export const ChatBox = () => {
             </div>
           </div>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className={`message message-${msg.role}`}>
-              <div className="message-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+          messages.map((msg, index) => {
+            const isLastMessage = index === messages.length - 1;
+            const showAnswering = isLastMessage && isStreaming && msg.role === 'assistant';
+
+            return (
+              <div key={msg.id} className={`message message-${msg.role}`}>
+                <div className="message-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                </div>
+                <div className="message-time">
+                  {msg.timestamp.toLocaleTimeString()}
+                  {showAnswering && <span className="answering-indicator">Answering</span>}
+                </div>
               </div>
-              <div className="message-time">{msg.timestamp.toLocaleTimeString()}</div>
-            </div>
-          ))
+            );
+          })
         )}
-        {isLoading && (
+        {isLoading && !isStreaming && (
           <div className="message message-assistant">
             <div className="message-content">Thinking...</div>
           </div>
