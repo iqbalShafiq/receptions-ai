@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { MessageSquare, Phone } from 'lucide-react';
 import { ChatBox } from './components/ChatBox';
 import { VoiceCallWidget } from './components/VoiceCallWidget';
+import { BackgroundPattern } from './components/BackgroundPattern';
 import { useConversationStore } from './store/conversationStore';
 import './App.css';
 
@@ -28,6 +29,7 @@ function App() {
 
   return (
     <div className="app">
+      <BackgroundPattern />
       <div className="container">
         <header className="app-header">
           <div className="header-content">

@@ -132,7 +132,7 @@ export const VoiceCallWidget = () => {
               <button
                 onClick={handleStartCall}
                 disabled={!isConnected}
-                className="mic-button"
+                className={`mic-button ${isPlayingResponse ? 'playing' : ''}`}
                 title="Start Voice Call"
               >
                 <Phone size={32} />

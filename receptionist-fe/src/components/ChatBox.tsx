@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useConversationStore } from '../store/conversationStore';
 import type { ChatResponse } from '../types/api';
@@ -11,6 +11,7 @@ export const ChatBox = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { messages, addMessage, error, setError, conversationId } = useConversationStore();
 
   const scrollToBottom = () => {
@@ -21,12 +22,25 @@ export const ChatBox = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+  // Auto-resize textarea based on content
+  const resizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  };
 
-    // Add user message to store
-    addMessage('user', inputValue);
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+    resizeTextarea();
+  };
+
+  const sendMessage = async (messageContent: string) => {
+    const trimmedMessage = messageContent.trim();
+    if (!trimmedMessage) return;
+
+    // Add user message to store - preserve original formatting including newlines
+    addMessage('user', messageContent);
     setInputValue('');
     setIsLoading(true);
 
@@ -36,7 +50,7 @@ export const ChatBox = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversation_id: conversationId,
-          message: inputValue,
+          message: trimmedMessage,
         }),
       });
 
@@ -53,7 +67,21 @@ export const ChatBox = () => {
       setError(errorMsg);
     } finally {
       setIsLoading(false);
+      resizeTextarea();
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Send on Enter, unless Shift is held (Shift+Enter adds a newline)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(inputValue);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(inputValue);
   };
 
   return (
@@ -61,7 +89,10 @@ export const ChatBox = () => {
       <div className="chat-messages">
         {messages.length === 0 ? (
           <div className="chat-empty">
-            <p>No messages yet. Start a conversation!</p>
+            <div className="chat-empty-content">
+              <MessageCircle size={48} strokeWidth={1.5} />
+              <p>No messages yet. Start a conversation!</p>
+            </div>
           </div>
         ) : (
           messages.map((msg) => (
@@ -84,13 +115,15 @@ export const ChatBox = () => {
       {error && <div className="chat-error">{error}</div>}
 
       <form onSubmit={handleSendMessage} className="chat-form">
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Type your message..."
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Type your message... (Shift+Enter for new line, Enter to send)"
           disabled={isLoading}
           className="chat-input"
+          rows={1}
         />
         <button type="submit" disabled={isLoading} className="chat-submit" title="Send message">
           <Send size={18} />

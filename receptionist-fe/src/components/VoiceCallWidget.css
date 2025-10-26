@@ -176,6 +176,26 @@
   }
 }
 
+.mic-button.playing {
+  background: #28a745;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  animation: pulse-playing 1s infinite;
+}
+
+.mic-button.playing:hover:not(:disabled) {
+  background: #218838;
+  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+}
+
+@keyframes pulse-playing {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3), 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(40, 167, 69, 0.8), 0 0 50px 25px rgba(40, 167, 69, 0.5);
+  }
+}
+
 .recording-indicator {
   display: flex;
   align-items: center;
