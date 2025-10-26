@@ -141,11 +141,11 @@ async def voice_call(websocket: WebSocket, conversation_id: str):
             db.refresh(conversation)
 
         conv_db_id = conversation.id
+
+        # Create realtime agent runner with FAQ loaded from database
+        runner = create_realtime_runner(db)
     finally:
         db.close()
-
-    # Create realtime agent runner
-    runner = create_realtime_runner()
 
     try:
         # Run the realtime session
