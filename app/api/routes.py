@@ -1,9 +1,11 @@
 import base64
+import json
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Conversation, Message
-from app.agents.receptionist_agent import process_message
+from app.agents.receptionist_agent import process_message, process_message_stream, process_message_stream_async
 from agents.realtime import RealtimeUserInputText
 from pydantic import BaseModel
 
@@ -22,6 +24,13 @@ class ChatResponse(BaseModel):
 
     response: str
     action: str
+
+
+class StreamChunk(BaseModel):
+    """Chunk model for streaming response"""
+
+    type: str  # "content" | "tool_call" | "done" | "error"
+    data: str | dict  # content text or metadata
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -67,6 +76,99 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return ChatResponse(response=response, action=action)
+
+
+@router.post("/chat-stream")
+async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
+    """
+    Handle text chat input with streaming output using Server-Sent Events.
+
+    - Load/create conversation
+    - Save user message
+    - Stream agent response in real-time
+    - Save complete response when done
+    """
+    # Get or create conversation
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.user_id == request.conversation_id)
+        .first()
+    )
+
+    if not conversation:
+        conversation = Conversation(user_id=request.conversation_id)
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+    # Save user message
+    user_message = Message(
+        conversation_id=conversation.id, role="user", content=request.message
+    )
+    db.add(user_message)
+    db.commit()
+
+    async def stream_generator():
+        """Async generator function for streaming SSE response with proper flushing"""
+        import asyncio
+
+        full_response = ""
+        action = "response"
+
+        try:
+            # Stream agent response with real-time token streaming
+            async for chunk in process_message_stream_async(db, conversation.id, request.message):
+                if chunk["type"] == "content":
+                    # Stream content chunks
+                    full_response += chunk["data"]
+                    sse_message = f"data: {json.dumps({'type': 'content', 'data': chunk['data']})}\n\n"
+                    yield sse_message
+                    # Small delay to allow browser to process each chunk
+                    await asyncio.sleep(0.001)
+
+                elif chunk["type"] == "tool_call":
+                    # Notify about tool calls
+                    sse_message = f"data: {json.dumps({'type': 'tool_call', 'data': chunk['data']})}\n\n"
+                    yield sse_message
+                    await asyncio.sleep(0.001)
+
+                elif chunk["type"] == "done":
+                    # Final message with action and full response
+                    action = chunk["data"]["action"]
+                    full_response = chunk["data"]["full_response"]
+                    sse_message = f"data: {json.dumps({'type': 'done', 'data': {'action': action}})}\n\n"
+                    yield sse_message
+
+                elif chunk["type"] == "error":
+                    # Error occurred
+                    full_response = chunk["data"]
+                    sse_message = f"data: {json.dumps({'type': 'error', 'data': chunk['data']})}\n\n"
+                    yield sse_message
+
+            # Save the complete assistant message to database
+            if full_response:
+                assistant_message = Message(
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=full_response
+                )
+                db.add(assistant_message)
+                db.commit()
+
+        except Exception as e:
+            error_msg = f"Stream error: {str(e)}"
+            sse_message = f"data: {json.dumps({'type': 'error', 'data': error_msg})}\n\n"
+            yield sse_message
+
+    # Return streaming response with proper SSE headers
+    return StreamingResponse(
+        stream_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @router.get("/conversations/{conversation_id}")

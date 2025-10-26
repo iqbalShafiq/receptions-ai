@@ -17,6 +17,7 @@ export interface ConversationState {
   // Actions
   setConversationId: (id: string) => void;
   addMessage: (role: 'user' | 'assistant', content: string) => void;
+  updateLastMessage: (content: string) => void;
   setLoading: (loading: boolean) => void;
   setConnected: (connected: boolean) => void;
   setError: (error: string | null) => void;
@@ -45,6 +46,17 @@ export const useConversationStore = create<ConversationState>((set) => ({
         },
       ],
     })),
+
+  updateLastMessage: (content) =>
+    set((state) => {
+      if (state.messages.length === 0) return state;
+      const updatedMessages = [...state.messages];
+      updatedMessages[updatedMessages.length - 1] = {
+        ...updatedMessages[updatedMessages.length - 1],
+        content,
+      };
+      return { messages: updatedMessages };
+    }),
 
   setLoading: (loading) => set({ isLoading: loading }),
 

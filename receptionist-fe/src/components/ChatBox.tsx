@@ -3,7 +3,6 @@ import { Send, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useConversationStore } from '../store/conversationStore';
-import type { ChatResponse } from '../types/api';
 import './ChatBox.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -13,7 +12,7 @@ export const ChatBox = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { messages, addMessage, error, setError, conversationId } = useConversationStore();
+  const { messages, addMessage, updateLastMessage, error, setError, conversationId } = useConversationStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,7 +45,8 @@ export const ChatBox = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/chat`, {
+      // Use streaming endpoint for real-time response
+      const response = await fetch(`${API_URL}/chat-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,9 +59,72 @@ export const ChatBox = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: ChatResponse = await response.json();
-      addMessage('assistant', data.response);
-      setError(null);
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      // Handle streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+      let isStreaming = true;
+      let messageAdded = false;
+
+      while (isStreaming) {
+        const { done, value } = await reader.read();
+        if (done) {
+          isStreaming = false;
+          break;
+        }
+
+        // Decode the chunk
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
+
+              if (data.type === 'content') {
+                // Accumulate content from stream
+                fullResponse += data.data;
+
+                // Add message on first chunk
+                if (!messageAdded) {
+                  addMessage('assistant', fullResponse);
+                  messageAdded = true;
+                } else {
+                  // Update message with new accumulated content
+                  updateLastMessage(fullResponse);
+                }
+              } else if (data.type === 'tool_call') {
+                // Add tool call notification to response
+                fullResponse += `\n*${data.data}*\n`;
+                if (messageAdded) {
+                  updateLastMessage(fullResponse);
+                } else {
+                  addMessage('assistant', fullResponse);
+                  messageAdded = true;
+                }
+              } else if (data.type === 'done') {
+                // Stream complete
+                setError(null);
+              } else if (data.type === 'error') {
+                // Error occurred
+                if (!messageAdded) {
+                  addMessage('assistant', `Error: ${data.data}`);
+                } else {
+                  updateLastMessage(`Error: ${data.data}`);
+                }
+                setError(data.data);
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE message:', line, e);
+            }
+          }
+        }
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to send message';
       addMessage('assistant', `Error: ${errorMsg}`);
