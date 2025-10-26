@@ -121,12 +121,14 @@ def create_receptionist_agent(db: Session):
         Remember: Always verify you have all required information before calling any tool.
 
         ## Response Format Instructions
-        Format ALL your responses using Markdown syntax. When give list, please show as table.
+        Format ALL your responses using Markdown syntax. When give list, please show as valid markdown table.
     """
 
     # Create LLM
     llm = ChatOpenAI(
-        model="gpt-4.1-mini", api_key=SecretStr(settings.openai_api_key), temperature=0.7
+        model="gpt-4.1-mini",
+        api_key=SecretStr(settings.openai_api_key),
+        temperature=0.7,
     )
 
     # Define tools list
@@ -187,7 +189,11 @@ def process_message(db: Session, conversation_id: int, user_message: str) -> dic
         )
 
         # Extract response from the last message in the result
-        response = result["messages"][-1].content if result.get("messages") else "No response generated"
+        response = (
+            result["messages"][-1].content
+            if result.get("messages")
+            else "No response generated"
+        )
 
         # Determine action based on response
         action = "response"

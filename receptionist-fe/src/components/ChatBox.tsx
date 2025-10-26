@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useConversationStore } from '../store/conversationStore';
 import type { ChatResponse } from '../types/api';
 import './ChatBox.css';
@@ -98,7 +99,7 @@ export const ChatBox = () => {
           messages.map((msg) => (
             <div key={msg.id} className={`message message-${msg.role}`}>
               <div className="message-content">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               </div>
               <div className="message-time">{msg.timestamp.toLocaleTimeString()}</div>
             </div>
