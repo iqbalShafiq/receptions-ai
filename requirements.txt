@@ -1,0 +1,35 @@
+# Web Framework
+fastapi
+uvicorn[standard]
+python-multipart
+websockets
+httpx
+
+# Database
+sqlalchemy
+
+# AI & LLM
+langchain
+langchain-openai
+openai
+
+# External APIs
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+twilio
+
+# Task Scheduling
+apscheduler
+
+# Utilities
+python-dotenv
+pydantic
+pydantic-settings
+requests
+
+# Development
+pytest
+pytest-asyncio
+black
+flake8
